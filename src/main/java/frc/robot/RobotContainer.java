@@ -81,7 +81,7 @@ public class RobotContainer {
     );
 
     // Operator bindings
-    m_operatorController.start().onTrue(new InstantCommand(m_drive::zeroHeading, m_drive));
+    m_driverController.start().onTrue(new InstantCommand(m_drive::zeroHeading, m_drive));
     m_operatorController.a().onTrue(new InstantCommand(m_drive::stop, m_drive));
     m_operatorController.y().onTrue(new InstantCommand(m_drive::setX, m_drive));
 

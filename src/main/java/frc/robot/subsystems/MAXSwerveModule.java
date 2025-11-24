@@ -58,8 +58,8 @@ public class MAXSwerveModule {
       new TalonFXConfiguration() // Adapted from MAXSwerveModule.drivingConfig
         .withMotorOutput(new MotorOutputConfigs().withNeutralMode(NeutralModeValue.Brake))
         .withSlot0(new Slot0Configs()
-          .withKP(0.05)
-          .withKV(1 / ModuleConstants.kDriveWheelFreeSpeedRps)
+          .withKP(0.025)
+          //.withKV(1 / ModuleConstants.kDriveWheelFreeSpeedRps)
         )
     );
     m_turningSpark.configure(Configs.MAXSwerveModule.turningConfig, ResetMode.kNoResetSafeParameters,
@@ -118,11 +118,11 @@ public class MAXSwerveModule {
   }
 
   static double mpsToRps(double mps) {
-    return mps * ModuleConstants.kWheelDiameterMeters * Math.PI / ModuleConstants.kDrivingMotorReduction;
+    return mps / (ModuleConstants.kWheelDiameterMeters * 2 * Math.PI) * ModuleConstants.kDrivingMotorReduction;
   }
 
   static double rpsToMps(double rps) {
-    return rps / (ModuleConstants.kWheelDiameterMeters * Math.PI / ModuleConstants.kDrivingMotorReduction);
+    return rps * ((ModuleConstants.kWheelDiameterMeters * 2 * Math.PI) / ModuleConstants.kDrivingMotorReduction);
   }
 
   /** Zeroes all the SwerveModule encoders. */
