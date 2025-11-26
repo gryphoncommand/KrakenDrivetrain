@@ -96,6 +96,7 @@ public class DriveSubsystem extends SubsystemBase {
   private final PoseEstimator poseEstimator;
   private final Field2d field2d = new Field2d();
   private final StructArrayPublisher<SwerveModuleState> publisher;
+  private final StructArrayPublisher<SwerveModuleState> desiredPublisher;
   private double currentTimestamp = Timer.getTimestamp();
   private boolean aligned = false;
 
@@ -105,6 +106,8 @@ public class DriveSubsystem extends SubsystemBase {
   public DriveSubsystem() {
     publisher = NetworkTableInstance.getDefault()
       .getStructArrayTopic("/SwerveStates", SwerveModuleState.struct).publish();
+    desiredPublisher = NetworkTableInstance.getDefault()
+      .getStructArrayTopic("/DesiredSwerveStates", SwerveModuleState.struct).publish();
     var alliance = DriverStation.getAlliance();
 
     poseEstimator = new PoseEstimator(stateStdDevs);
@@ -129,6 +132,27 @@ public class DriveSubsystem extends SubsystemBase {
 
           builder.addDoubleProperty("Back Right Angle", ()->m_rearRight.getState().angle.getDegrees(), null);
           builder.addDoubleProperty("Back Right Velocity", ()->m_rearRight.getState().speedMetersPerSecond, null);
+
+          builder.addDoubleProperty("Robot Angle", ()->getRotation().getRadians(), null);
+      }
+    });
+
+    SmartDashboard.putData("Desired Swerve Positions", new Sendable() {
+      @Override
+      public void initSendable(SendableBuilder builder) {
+          builder.setSmartDashboardType("SwerveDrive");
+
+          builder.addDoubleProperty("Front Left Angle", ()->m_frontLeft.getDesiredState().angle.getDegrees(), null);
+          builder.addDoubleProperty("Front Left Velocity", ()->m_frontLeft.getDesiredState().speedMetersPerSecond, null);
+
+          builder.addDoubleProperty("Front Right Angle", ()->m_frontRight.getDesiredState().angle.getDegrees(), null);
+          builder.addDoubleProperty("Front Right Velocity", ()->m_frontRight.getDesiredState().speedMetersPerSecond, null);
+
+          builder.addDoubleProperty("Back Left Angle", ()->m_rearLeft.getDesiredState().angle.getDegrees(), null);
+          builder.addDoubleProperty("Back Left Velocity", ()->m_rearLeft.getDesiredState().speedMetersPerSecond, null);
+
+          builder.addDoubleProperty("Back Right Angle", ()->m_rearRight.getDesiredState().angle.getDegrees(), null);
+          builder.addDoubleProperty("Back Right Velocity", ()->m_rearRight.getDesiredState().speedMetersPerSecond, null);
 
           builder.addDoubleProperty("Robot Angle", ()->getRotation().getRadians(), null);
       }
@@ -331,6 +355,16 @@ public class DriveSubsystem extends SubsystemBase {
     return modules;
   }
 
+  public SwerveModuleState[] getDesiredStates(){
+    SwerveModuleState[] modules = {
+    m_frontLeft.getDesiredState(),
+    m_frontRight.getDesiredState(),
+    m_rearLeft.getDesiredState(),
+    m_rearRight.getDesiredState()};
+
+    return modules;
+  }
+
   public Rotation2d getRotation(){
     return Rotation2d.fromDegrees(m_gyro.getAngle(IMUAxis.kZ) + gyroOffset);
   }
@@ -424,6 +458,7 @@ public class DriveSubsystem extends SubsystemBase {
 
       field2d.setRobotPose(getCurrentPose());
       publisher.set(getStates());
+      desiredPublisher.set(getDesiredStates());
     SmartDashboard.putData("Field", field2d);
     SmartDashboard.putNumber("Current Speed", MovementCalculations.getVelocityMagnitude(getCurrentSpeeds()).magnitude());
     currentTimestamp = Timer.getTimestamp();

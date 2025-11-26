@@ -14,12 +14,8 @@ import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
-import com.ctre.phoenix6.configs.MotorOutputConfigs;
-import com.ctre.phoenix6.configs.Slot0Configs;
-import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.VelocityDutyCycle;
+import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
-import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.revrobotics.AbsoluteEncoder;
 
 import frc.robot.Configs;
@@ -54,14 +50,7 @@ public class MAXSwerveModule {
     // Apply the respective configurations to the SPARKS. Reset parameters before
     // applying the configuration to bring the SPARK to a known good state. Persist
     // the settings to the SPARK to avoid losing them on a power cycle.
-    m_drivingKraken.getConfigurator().apply(
-      new TalonFXConfiguration() // Adapted from MAXSwerveModule.drivingConfig
-        .withMotorOutput(new MotorOutputConfigs().withNeutralMode(NeutralModeValue.Brake))
-        .withSlot0(new Slot0Configs()
-          .withKP(0.025)
-          //.withKV(1 / ModuleConstants.kDriveWheelFreeSpeedRps)
-        )
-    );
+    m_drivingKraken.getConfigurator().apply(Configs.MAXSwerveModule.driveConfig);
     m_turningSpark.configure(Configs.MAXSwerveModule.turningConfig, ResetMode.kNoResetSafeParameters,
         PersistMode.kPersistParameters);
 
@@ -81,6 +70,10 @@ public class MAXSwerveModule {
     return Robot.isReal() ? 
       new SwerveModuleState(rpsToMps(m_drivingKraken.getVelocity().getValueAsDouble()), new Rotation2d(m_turningEncoder.getPosition() - m_chassisAngularOffset)) : 
       m_desiredState;
+  }
+
+  public SwerveModuleState getDesiredState(){
+    return m_desiredState;
   }
 
   /**
@@ -110,19 +103,23 @@ public class MAXSwerveModule {
     // Optimize the reference state to avoid spinning further than 90 degrees.
     correctedDesiredState.optimize(new Rotation2d(m_turningEncoder.getPosition()));
 
-    // Command driving and turning SPARKS towards their respective setpoints.
-    m_drivingKraken.setControl(new VelocityDutyCycle(mpsToRps(correctedDesiredState.speedMetersPerSecond)));
+    // Command driving and turning motors towards their respective setpoints.
+    m_drivingKraken.setControl(
+      // VelocityDutyCycle requests just dont allow pid sob so that's why I'm using VelocityVoltage
+        new VelocityVoltage(mpsToRps(correctedDesiredState.speedMetersPerSecond))
+            .withSlot(0)
+    );
     m_turningClosedLoopController.setReference(correctedDesiredState.angle.getRadians(), ControlType.kPosition);
 
     m_desiredState = desiredState;
   }
 
   static double mpsToRps(double mps) {
-    return mps / (ModuleConstants.kWheelDiameterMeters * 2 * Math.PI) * ModuleConstants.kDrivingMotorReduction;
+    return mps / (ModuleConstants.kWheelDiameterMeters * Math.PI) * ModuleConstants.kDrivingMotorReduction;
   }
 
   static double rpsToMps(double rps) {
-    return rps * ((ModuleConstants.kWheelDiameterMeters * 2 * Math.PI) / ModuleConstants.kDrivingMotorReduction);
+    return rps * ((ModuleConstants.kWheelDiameterMeters * Math.PI) / ModuleConstants.kDrivingMotorReduction);
   }
 
   /** Zeroes all the SwerveModule encoders. */
