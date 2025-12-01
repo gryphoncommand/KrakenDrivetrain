@@ -73,7 +73,7 @@ public class MAXSwerveModule {
   }
 
   public SwerveModuleState getDesiredState(){
-    return m_desiredState;
+    return new SwerveModuleState(Math.copySign(m_desiredState.speedMetersPerSecond, rpsToMps(m_drivingKraken.getVelocity().getValueAsDouble())), m_desiredState.angle);
   }
 
   /**
@@ -115,7 +115,7 @@ public class MAXSwerveModule {
   }
 
   static double mpsToRps(double mps) {
-    return mps / (ModuleConstants.kWheelDiameterMeters * Math.PI) * ModuleConstants.kDrivingMotorReduction;
+    return (mps / (ModuleConstants.kWheelDiameterMeters * Math.PI)) * ModuleConstants.kDrivingMotorReduction;
   }
 
   static double rpsToMps(double rps) {

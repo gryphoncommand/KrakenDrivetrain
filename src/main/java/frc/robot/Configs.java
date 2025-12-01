@@ -6,7 +6,6 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.revrobotics.spark.config.ClosedLoopConfig.FeedbackSensor;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 
-import frc.robot.Constants.DriveConstants;
 import frc.robot.Constants.ModuleConstants;
 
 public final class Configs {
@@ -20,12 +19,12 @@ public final class Configs {
                 double turningFactor = 2 * Math.PI;
                 
                 // PID + FF tuning
-                driveConfig.Slot0.kP = 0.1;     
+                driveConfig.Slot0.kP = 0.2;     
                 driveConfig.Slot0.kI = 0.0;
-                driveConfig.Slot0.kD = 0.0;
+                driveConfig.Slot0.kD = 0.001;
 
-                driveConfig.Slot0.kS = 0.1;
-                driveConfig.Slot0.kV = 12.0 / ModuleConstants.kDriveWheelFreeSpeedRps;
+                driveConfig.Slot0.kS = 0.0;
+                driveConfig.Slot0.kV = 12 / ModuleConstants.kDrivingMotorFreeSpeedRps;
                 driveConfig.Slot0.kA = 0.0;
 
                 // Motor behavior
