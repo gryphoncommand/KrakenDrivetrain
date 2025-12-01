@@ -4,7 +4,6 @@
 
 package frc.robot;
 
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -58,11 +57,10 @@ public class RobotContainer {
     m_drive.setDefaultCommand(
         new RunCommand(
             () -> {
-              double forward = -MathUtil.applyDeadband(m_driverController.getLeftY(), OIConstants.kDriveDeadband);
-              double strafe = -MathUtil.applyDeadband(m_driverController.getLeftX(), OIConstants.kDriveDeadband);
-              double turn = -MathUtil.applyDeadband(m_driverController.getRightX(), OIConstants.kDriveDeadband);
+              double[] translation = OIConstants.kDriveFilter.filter(-m_driverController.getLeftX(), -m_driverController.getLeftY());
+              double[] turn = OIConstants.kTurnFilter.filter(-m_driverController.getRightX(), 0);
 
-              m_drive.drive(forward, strafe, turn, true);
+              m_drive.drive(translation[0], translation[1], turn[0], true);
             },
             m_drive));
   }

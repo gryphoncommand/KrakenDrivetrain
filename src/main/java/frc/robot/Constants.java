@@ -96,9 +96,30 @@ public final class Constants {
   }
 
   public static final class OIConstants {
+    // TODO: Tune smoothing values
     public static final int kDriverControllerPort = 0;
     public static final int kOperatorControllerPort = 1;
-    public static final double kDriveDeadband = 0.05;
+
+    public static final double kDriveDeadband = 0.09;
+    public static final double kDriveSmoothing = 0.9;
+    public static final double kDriveExponent = 1;
+    public static final double kDriveExponentPercent = 1;
+
+    public static final double kTurnDeadband = 0.07;
+    public static final double kTurnSmoothing = 0.6;
+    public static final double kTurnExponent = 1;
+    public static final double kTurnExponentPercent = 1;
+
+    public static final PolarJoystickFilter kDriveFilter = new PolarJoystickFilter(
+      kDriveDeadband,
+      kDriveSmoothing,
+      kDriveExponent,
+      kDriveExponentPercent);
+    public static final PolarJoystickFilter kTurnFilter = new PolarJoystickFilter(
+      kTurnDeadband,
+      kTurnSmoothing,
+      kTurnExponent,
+      kTurnExponentPercent);
   }
 
   public static final class AutoConstants {
