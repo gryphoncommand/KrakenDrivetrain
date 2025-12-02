@@ -27,6 +27,8 @@ public final class Configs {
                 driveConfig.Slot0.kV = 12 / ModuleConstants.kDrivingMotorFreeSpeedRps;
                 driveConfig.Slot0.kA = 0.0;
 
+                driveConfig.CurrentLimits.withSupplyCurrentLimit(40).withSupplyCurrentLimitEnable(true);
+
                 // Motor behavior
                 driveConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
