@@ -11,31 +11,18 @@ import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 
-import com.revrobotics.spark.SparkClosedLoopController;
-import com.revrobotics.spark.SparkMax;
-import com.revrobotics.spark.SparkBase.ControlType;
-import com.revrobotics.spark.SparkBase.PersistMode;
-import com.revrobotics.spark.SparkBase.ResetMode;
-import com.revrobotics.spark.SparkLowLevel.MotorType;
-
 import static edu.wpi.first.units.Units.Volts;
 
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.sim.TalonFXSimState;
-import com.revrobotics.AbsoluteEncoder;
 
 import frc.robot.Configs;
 import frc.robot.Constants.ModuleConstants;
 
 public class SimSwerveModule implements SwerveModuleIO {
   private final TalonFX m_drivingKraken;
-  private final SparkMax m_turningSpark;
   private final TalonFXSimState m_drivingSim;
-
-  private final AbsoluteEncoder m_turningEncoder;
-
-  private final SparkClosedLoopController m_turningClosedLoopController;
 
   private final VelocityVoltage m_controlRequest = new VelocityVoltage(0);
 
@@ -56,24 +43,16 @@ public class SimSwerveModule implements SwerveModuleIO {
    */
   public SimSwerveModule(int drivingCANId, int turningCANId, double chassisAngularOffset) {
     m_drivingKraken = new TalonFX(drivingCANId);
-    m_turningSpark = new SparkMax(turningCANId, MotorType.kBrushless);
     m_drivingSim = m_drivingKraken.getSimState();
     m_drivingSim.setSupplyVoltage(Volts.of(12));
-
-
-    m_turningEncoder = m_turningSpark.getAbsoluteEncoder();
-
-    m_turningClosedLoopController = m_turningSpark.getClosedLoopController();
 
     // Apply the respective configurations to the SPARKS. Reset parameters before
     // applying the configuration to bring the SPARK to a known good state. Persist
     // the settings to the SPARK to avoid losing them on a power cycle.
     m_drivingKraken.getConfigurator().apply(Configs.MAXSwerveModule.driveConfig);
-    m_turningSpark.configure(Configs.MAXSwerveModule.turningConfig, ResetMode.kNoResetSafeParameters,
-        PersistMode.kPersistParameters);
 
     m_chassisAngularOffset = chassisAngularOffset;
-    m_desiredState.angle = new Rotation2d(m_turningEncoder.getPosition());
+    m_desiredState.angle = new Rotation2d();
     m_drivingKraken.setPosition(0);
   }
 
@@ -102,7 +81,7 @@ public class SimSwerveModule implements SwerveModuleIO {
     // relative to the chassis.
     return new SwerveModulePosition(
         m_drivingKraken.getPosition().getValueAsDouble(),
-        new Rotation2d(m_turningEncoder.getPosition() - m_chassisAngularOffset));
+        m_desiredState.angle);
   }
 
   /**
@@ -124,7 +103,6 @@ public class SimSwerveModule implements SwerveModuleIO {
     m_drivingKraken.setControl(
       m_controlRequest.withVelocity(mpsToRps(correctedDesiredState.speedMetersPerSecond))
     );
-    m_turningClosedLoopController.setReference(correctedDesiredState.angle.getRadians(), ControlType.kPosition);
 
     m_desiredState = desiredState;
   }
