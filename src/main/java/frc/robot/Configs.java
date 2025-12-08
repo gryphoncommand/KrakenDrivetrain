@@ -18,17 +18,18 @@ public final class Configs {
                 // Use module constants to calculate conversion factors and feed forward gain.
                 double turningFactor = 2 * Math.PI;
                 
+                var slot0Configs = driveConfig.Slot0;
                 // PID + FF tuning
-                driveConfig.Slot0.kP = 0.2;     
-                driveConfig.Slot0.kI = 0.0;
-                driveConfig.Slot0.kD = 0.001;
+                slot0Configs.kP = 0.7;
+                slot0Configs.kI = 0.0;
+                slot0Configs.kD = 0.1;
 
-                driveConfig.Slot0.kS = 0.0;
-                driveConfig.Slot0.kV = 12 / ModuleConstants.kDrivingMotorFreeSpeedRps;
-                driveConfig.Slot0.kA = 0.0;
+                slot0Configs.kS = 0.0;
+                slot0Configs.kV = (12 / ModuleConstants.kDrivingMotorFreeSpeedRps);
+                slot0Configs.kA = 0.0;
 
                 driveConfig.CurrentLimits.withSupplyCurrentLimit(40).withSupplyCurrentLimitEnable(true);
-
+                
                 // Motor behavior
                 driveConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 

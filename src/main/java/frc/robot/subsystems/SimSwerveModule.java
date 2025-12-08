@@ -7,6 +7,9 @@ package frc.robot.subsystems;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.math.system.plant.LinearSystemId;
+import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkMax;
@@ -14,25 +17,36 @@ import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
+
+import static edu.wpi.first.units.Units.Volts;
+
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.sim.TalonFXSimState;
 import com.revrobotics.AbsoluteEncoder;
 
 import frc.robot.Configs;
 import frc.robot.Constants.ModuleConstants;
 
-public class MAXSwerveModule implements SwerveModuleIO {
+public class SimSwerveModule implements SwerveModuleIO {
   private final TalonFX m_drivingKraken;
   private final SparkMax m_turningSpark;
+  private final TalonFXSimState m_drivingSim;
 
   private final AbsoluteEncoder m_turningEncoder;
 
   private final SparkClosedLoopController m_turningClosedLoopController;
 
+  private final VelocityVoltage m_controlRequest = new VelocityVoltage(0);
+
+  private final DCMotorSim m_motorSimModel = new DCMotorSim(
+        LinearSystemId.createDCMotorSystem(
+            DCMotor.getKrakenX60(1), 0.001, 1
+        ),
+        DCMotor.getKrakenX60(1)
+    );
   private double m_chassisAngularOffset = 0;
   private SwerveModuleState m_desiredState = new SwerveModuleState(0.0, new Rotation2d());
-
-  private final VelocityVoltage m_controlRequest = new VelocityVoltage(0);
 
   /**
    * Constructs a MAXSwerveModule and configures the driving and turning motor,
@@ -40,9 +54,12 @@ public class MAXSwerveModule implements SwerveModuleIO {
    * MAXSwerve Module built with NEOs, SPARKS MAX, and a Through Bore
    * Encoder.
    */
-  public MAXSwerveModule(int drivingCANId, int turningCANId, double chassisAngularOffset) {
+  public SimSwerveModule(int drivingCANId, int turningCANId, double chassisAngularOffset) {
     m_drivingKraken = new TalonFX(drivingCANId);
     m_turningSpark = new SparkMax(turningCANId, MotorType.kBrushless);
+    m_drivingSim = m_drivingKraken.getSimState();
+    m_drivingSim.setSupplyVoltage(Volts.of(12));
+
 
     m_turningEncoder = m_turningSpark.getAbsoluteEncoder();
 
@@ -68,11 +85,11 @@ public class MAXSwerveModule implements SwerveModuleIO {
   public SwerveModuleState getState() {
     // Apply chassis angular offset to the encoder position to get the position
     // relative to the chassis.
-    return new SwerveModuleState(rpsToMps(m_drivingKraken.getVelocity().getValueAsDouble()), new Rotation2d(m_turningEncoder.getPosition() - m_chassisAngularOffset));
+    return new SwerveModuleState(Math.copySign(rpsToMps(m_drivingKraken.getVelocity().getValueAsDouble()), m_desiredState.speedMetersPerSecond), m_desiredState.angle); 
   }
 
   public SwerveModuleState getDesiredState(){
-    return new SwerveModuleState(Math.copySign(m_desiredState.speedMetersPerSecond, rpsToMps(m_drivingKraken.getVelocity().getValueAsDouble())), m_desiredState.angle);
+    return new SwerveModuleState(m_desiredState.speedMetersPerSecond, m_desiredState.angle);
   }
 
   /**
@@ -100,7 +117,7 @@ public class MAXSwerveModule implements SwerveModuleIO {
     correctedDesiredState.angle = desiredState.angle.plus(Rotation2d.fromRadians(m_chassisAngularOffset));
 
     // Optimize the reference state to avoid spinning further than 90 degrees.
-    correctedDesiredState.optimize(new Rotation2d(m_turningEncoder.getPosition()));
+    correctedDesiredState.optimize(m_desiredState.angle.plus(Rotation2d.fromRadians(m_chassisAngularOffset)));
 
     // Command driving and turning motors towards their respective setpoints.
     m_controlRequest.Slot = 0;
@@ -124,4 +141,20 @@ public class MAXSwerveModule implements SwerveModuleIO {
   public void resetEncoders() {
     m_drivingKraken.setPosition(0);
   }
+
+  public void simulationPeriodic() {
+    // get the motor voltage of the TalonFX
+    var motorVoltage = m_drivingSim.getMotorVoltageMeasure();
+
+    // use the motor voltage to calculate new position and velocity
+    // using WPILib's DCMotorSim class for physics simulation
+    m_motorSimModel.setInputVoltage(motorVoltage.in(Volts));
+    m_motorSimModel.update(0.020); // assume 20 ms loop time
+
+    // apply the new rotor position and velocity to the TalonFX;
+    // note that this is rotor position/velocity (before gear ratio), but
+    // DCMotorSim returns mechanism position/velocity (after gear ratio)
+    m_drivingSim.setRawRotorPosition(m_motorSimModel.getAngularPosition());
+    m_drivingSim.setRotorVelocity(m_motorSimModel.getAngularVelocity());
+    }
 }

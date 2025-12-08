@@ -19,9 +19,6 @@ import com.pathplanner.lib.path.GoalEndState;
 import com.pathplanner.lib.path.IdealStartingState;
 import com.pathplanner.lib.path.PathPlannerPath;
 import com.pathplanner.lib.path.Waypoint;
-import com.pathplanner.lib.util.DriveFeedforwards;
-import com.pathplanner.lib.util.swerve.SwerveSetpoint;
-import com.pathplanner.lib.util.swerve.SwerveSetpointGenerator;
 
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
@@ -61,28 +58,13 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class DriveSubsystem extends SubsystemBase {
   // Create MAXSwerveModules
-  private final MAXSwerveModule m_frontLeft = new MAXSwerveModule(
-      DriveConstants.kFrontLeftDrivingCanId,
-      DriveConstants.kFrontLeftTurningCanId,
-      DriveConstants.kFrontLeftChassisAngularOffset);
+  private final SwerveModuleIO m_frontLeft;
 
-  private final MAXSwerveModule m_frontRight = new MAXSwerveModule(
-      DriveConstants.kFrontRightDrivingCanId,
-      DriveConstants.kFrontRightTurningCanId,
-      DriveConstants.kFrontRightChassisAngularOffset);
+  private final SwerveModuleIO m_frontRight;
 
-  private final MAXSwerveModule m_rearLeft = new MAXSwerveModule(
-      DriveConstants.kRearLeftDrivingCanId,
-      DriveConstants.kRearLeftTurningCanId,
-      DriveConstants.kBackLeftChassisAngularOffset);
+  private final SwerveModuleIO m_rearLeft;
 
-  private final MAXSwerveModule m_rearRight = new MAXSwerveModule(
-      DriveConstants.kRearRightDrivingCanId,
-      DriveConstants.kRearRightTurningCanId,
-      DriveConstants.kBackRightChassisAngularOffset);
-
-  private SwerveSetpointGenerator setpointGenerator;
-  private SwerveSetpoint previousSetpoint;
+  private final SwerveModuleIO m_rearRight;
 
   // The gyro sensor
   private final ADIS16470_IMU m_gyro = new ADIS16470_IMU();
@@ -104,6 +86,41 @@ public class DriveSubsystem extends SubsystemBase {
 
   /** Creates a new DriveSubsystem. */
   public DriveSubsystem() {
+    if (Robot.isReal()){
+      m_frontLeft = new MAXSwerveModule(
+        DriveConstants.kFrontLeftDrivingCanId,
+        DriveConstants.kFrontLeftTurningCanId,
+        DriveConstants.kFrontLeftChassisAngularOffset);
+      m_frontRight = new MAXSwerveModule(
+        DriveConstants.kFrontRightDrivingCanId,
+        DriveConstants.kFrontRightTurningCanId,
+        DriveConstants.kFrontRightChassisAngularOffset);
+      m_rearLeft = new MAXSwerveModule(
+        DriveConstants.kRearLeftDrivingCanId,
+        DriveConstants.kRearLeftTurningCanId,
+        DriveConstants.kBackLeftChassisAngularOffset);
+      m_rearRight = new MAXSwerveModule(
+        DriveConstants.kRearRightDrivingCanId,
+        DriveConstants.kRearRightTurningCanId,
+        DriveConstants.kBackRightChassisAngularOffset);
+    } else {
+      m_frontLeft = new SimSwerveModule(
+        DriveConstants.kFrontLeftDrivingCanId,
+        DriveConstants.kFrontLeftTurningCanId,
+        DriveConstants.kFrontLeftChassisAngularOffset);
+      m_frontRight = new SimSwerveModule(
+        DriveConstants.kFrontRightDrivingCanId,
+        DriveConstants.kFrontRightTurningCanId,
+        DriveConstants.kFrontRightChassisAngularOffset);
+      m_rearLeft = new SimSwerveModule(
+        DriveConstants.kRearLeftDrivingCanId,
+        DriveConstants.kRearLeftTurningCanId,
+        DriveConstants.kBackLeftChassisAngularOffset);
+      m_rearRight = new SimSwerveModule(
+        DriveConstants.kRearRightDrivingCanId,
+        DriveConstants.kRearRightTurningCanId,
+        DriveConstants.kBackRightChassisAngularOffset);
+    }
     publisher = NetworkTableInstance.getDefault()
       .getStructArrayTopic("/SwerveStates", SwerveModuleState.struct).publish();
     desiredPublisher = NetworkTableInstance.getDefault()
@@ -187,66 +204,13 @@ public class DriveSubsystem extends SubsystemBase {
       },
       this // Reference to this subsystem to set requirements
     );
-
-    setpointGenerator = new SwerveSetpointGenerator(
-        config, // The robot configuration. This is the same config used for generating trajectories and running path following commands.
-        Units.rotationsToRadians(10.0) // The max rotation velocity of a swerve module in radians per second. This should probably be stored in your Constants file
-    );
-
-    ChassisSpeeds currentSpeeds = getCurrentSpeeds(); // Method to get current robot-relative chassis speeds
-    SwerveModuleState[] currentStates = getStates(); // Method to get the current swerve module states
-    previousSetpoint = new SwerveSetpoint(currentSpeeds, currentStates, DriveFeedforwards.zeros(config.numModules));
   }
 
   public void driveRobotRelativeChassis(ChassisSpeeds speeds) {
     drive(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond, speeds.omegaRadiansPerSecond, false);
   }
 
-  /**
-   * Method to drive the robot using joystick info.
-   *
-   * @param xSpeed        Speed of the robot in the x direction (forward).
-   * @param ySpeed        Speed of the robot in the y direction (sideways).
-   * @param rot           Angular rate of the robot.
-   * @param fieldRelative Whether the provided x and y speeds are relative to the
-   *                      field.
-   */
-  public void driveWithSetpoints(double xSpeed, double ySpeed, double rot, boolean fieldRelative) {
-    // Convert the commanded speeds into the correct units for the drivetrain
-    double xSpeedDelivered = xSpeed * DriveConstants.kMaxSpeedMetersPerSecond;
-    double ySpeedDelivered = ySpeed * DriveConstants.kMaxSpeedMetersPerSecond;
-    double rotDelivered = rot * DriveConstants.kMaxAngularSpeed;
-
-    var deliveredSpeeds = fieldRelative
-    ? ChassisSpeeds.fromFieldRelativeSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered,
-      Rotation2d.fromDegrees(Robot.isReal() ? getHeading() : getCurrentPose().getRotation().getDegrees()))
-      : new ChassisSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered);
-
-    /*
-    var swerveModuleStates = DriveConstants.kDriveKinematics.toSwerveModuleStates(deliveredSpeeds);
-    SwerveDriveKinematics.desaturateWheelSpeeds(
-    swerveModuleStates, DriveConstants.kMaxSpeedMetersPerSecond);
-    */
-
-      previousSetpoint = setpointGenerator.generateSetpoint(
-        previousSetpoint, // The previous setpoint
-        deliveredSpeeds, // The desired target speeds
-        0.02 // The loop time of the robot code, in seconds
-      );
-
-    var swerveModuleStates = previousSetpoint.moduleStates();
-
-    m_frontLeft.setDesiredState(swerveModuleStates[0]);
-    m_frontRight.setDesiredState(swerveModuleStates[1]);
-    m_rearLeft.setDesiredState(swerveModuleStates[2]);
-    m_rearRight.setDesiredState(swerveModuleStates[3]);
-  }
-
   public void drive(double xSpeed, double ySpeed, double rot, boolean fieldRelative) {
-    if (Robot.isSimulation()){
-      driveWithSetpoints(xSpeed, ySpeed, rot, fieldRelative);
-      return;
-    }
     // Convert the commanded speeds into the correct units for the drivetrain
     double xSpeedDelivered = xSpeed * DriveConstants.kMaxSpeedMetersPerSecond;
     double ySpeedDelivered = ySpeed * DriveConstants.kMaxSpeedMetersPerSecond;
@@ -462,6 +426,14 @@ public class DriveSubsystem extends SubsystemBase {
     SmartDashboard.putData("Field", field2d);
     SmartDashboard.putNumber("Current Speed", MovementCalculations.getVelocityMagnitude(getCurrentSpeeds()).magnitude());
     currentTimestamp = Timer.getTimestamp();
+  }
+
+  @Override
+  public void simulationPeriodic() {
+      ((SimSwerveModule) m_frontLeft).simulationPeriodic();
+      ((SimSwerveModule) m_frontRight).simulationPeriodic();
+      ((SimSwerveModule) m_rearLeft).simulationPeriodic();
+      ((SimSwerveModule) m_rearRight).simulationPeriodic();
   }
 
   public Pose2d getCurrentPose() {

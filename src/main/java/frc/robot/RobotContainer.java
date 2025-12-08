@@ -4,12 +4,19 @@
 
 package frc.robot;
 
-import edu.wpi.first.math.MathUtil;
+import frc.robot.Constants.DriveConstants;
 import frc.robot.Constants.OIConstants;
 import frc.robot.subsystems.DriveSubsystem;
+
+import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
-import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 
 public class RobotContainer {
@@ -33,11 +40,14 @@ public class RobotContainer {
     m_drive.setDefaultCommand(
         new RunCommand(
             () -> {
-              double forward = -MathUtil.applyDeadband(m_driverController.getLeftY(), OIConstants.kDriveDeadband);
-              double strafe = -MathUtil.applyDeadband(m_driverController.getLeftX(), OIConstants.kDriveDeadband);
-              double turn = -MathUtil.applyDeadband(m_driverController.getRightX(), OIConstants.kTurnDeadband);
+              double forward = m_driverController.getLeftY();
+              double strafe = m_driverController.getLeftX();
+              double turn = m_driverController.getRightX();
 
-              m_drive.drive(forward, strafe, turn, true);
+              m_drive.drive(
+                -MathUtil.applyDeadband(forward, OIConstants.kDriveDeadband),
+                -MathUtil.applyDeadband(strafe, OIConstants.kDriveDeadband),
+                -MathUtil.applyDeadband(turn, OIConstants.kDriveDeadband), true);
             },
             m_drive));
   }
@@ -46,6 +56,7 @@ public class RobotContainer {
     // Driver bindings
     m_driverController.start().onTrue(new InstantCommand(()->m_drive.zeroHeading(), m_drive));
     // Operator bindings
+    SmartDashboard.putData("Drive Forward A Lot", new RunCommand(()->m_drive.driveRobotRelativeChassis(new ChassisSpeeds(DriveConstants.kMaxSpeedMetersPerSecond, 0, 0)), m_drive).withTimeout(3));
   
   }
 
@@ -53,8 +64,10 @@ public class RobotContainer {
     
 
   /** Returns the autonomous command. */
-  public SequentialCommandGroup getAutonomousCommand() {
-    // TODO: Fill in with auto
-    return new SequentialCommandGroup();
+  public Command getAutonomousCommand() {
+    return 
+    m_drive.PathToPose(new Pose2d(new Translation2d(4, 6), new Rotation2d(3*Math.PI/4)), 0).andThen(
+      m_drive.PathToPose(new Pose2d(new Translation2d(12, 2), new Rotation2d(11*Math.PI/6)), 0)
+    );
   }
 }
