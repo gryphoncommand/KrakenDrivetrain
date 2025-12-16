@@ -11,6 +11,7 @@ import frc.robot.Constants.ModuleConstants;
 public final class Configs {
     public static final class MAXSwerveModule {
         public static final TalonFXConfiguration driveConfig = new TalonFXConfiguration();
+        public static final TalonFXConfiguration turnSimConfig = new TalonFXConfiguration();
 
         public static final SparkMaxConfig turningConfig = new SparkMaxConfig();
 
@@ -18,20 +19,37 @@ public final class Configs {
                 // Use module constants to calculate conversion factors and feed forward gain.
                 double turningFactor = 2 * Math.PI;
                 
-                var slot0Configs = driveConfig.Slot0;
+                var slot0ConfigsDrive = driveConfig.Slot0;
                 // PID + FF tuning
-                slot0Configs.kP = 0.7;
-                slot0Configs.kI = 0.0;
-                slot0Configs.kD = 0.1;
+                slot0ConfigsDrive.kP = 0.7;
+                slot0ConfigsDrive.kI = 0.0;
+                slot0ConfigsDrive.kD = 0.1;
 
-                slot0Configs.kS = 0.0;
-                slot0Configs.kV = (12 / ModuleConstants.kDrivingMotorFreeSpeedRps);
-                slot0Configs.kA = 0.0;
+                slot0ConfigsDrive.kS = 0.0;
+                slot0ConfigsDrive.kV = (12 / ModuleConstants.kDrivingMotorFreeSpeedRps);
+                slot0ConfigsDrive.kA = 0.0;
 
-                driveConfig.CurrentLimits.withSupplyCurrentLimit(40).withSupplyCurrentLimitEnable(true);
+                driveConfig.CurrentLimits.withSupplyCurrentLimit(50).withSupplyCurrentLimitEnable(true);
                 
                 // Motor behavior
                 driveConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+
+                var slot0Configsturn = turnSimConfig.Slot0;
+
+                turnSimConfig.ClosedLoopGeneral.ContinuousWrap = true;
+
+                slot0Configsturn.kP = 2.0;
+                slot0Configsturn.kI = 0.0;
+                slot0Configsturn.kD = 0.0;
+
+                slot0Configsturn.kS = 0.0;
+                slot0Configsturn.kV = 0.0;
+                slot0Configsturn.kA = 0.0;
+
+                turnSimConfig.CurrentLimits.withSupplyCurrentLimit(20).withSupplyCurrentLimitEnable(true);
+                
+                // Motor behavior
+                turnSimConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
                 turningConfig
                         .idleMode(IdleMode.kBrake)

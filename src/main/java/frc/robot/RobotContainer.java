@@ -57,6 +57,8 @@ public class RobotContainer {
     m_driverController.start().onTrue(new InstantCommand(()->m_drive.zeroHeading(), m_drive));
     // Operator bindings
     SmartDashboard.putData("Drive Forward A Lot", new RunCommand(()->m_drive.driveRobotRelativeChassis(new ChassisSpeeds(DriveConstants.kMaxSpeedMetersPerSecond, 0, 0)), m_drive).withTimeout(3));
+    SmartDashboard.putData("Drive Back A Lot", new RunCommand(()->m_drive.driveRobotRelativeChassis(new ChassisSpeeds(-DriveConstants.kMaxSpeedMetersPerSecond, 0, 0)), m_drive).withTimeout(3));
+    SmartDashboard.putData("Drive Forward + Turn A Lot", new RunCommand(()->m_drive.drive(1, 0, 1, true), m_drive).withTimeout(3));
   
   }
 
