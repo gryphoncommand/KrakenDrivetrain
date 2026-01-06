@@ -16,8 +16,8 @@ import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 import static edu.wpi.first.units.Units.Volts;
 
+import com.ctre.phoenix6.controls.MotionMagicVelocityVoltage;
 import com.ctre.phoenix6.controls.PositionVoltage;
-import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.sim.TalonFXSimState;
 
@@ -30,14 +30,14 @@ public class SimSwerveModule implements SwerveModuleIO {
   private final TalonFX m_turningMotor;
   private final TalonFXSimState m_turningSim;
 
-  private final VelocityVoltage m_driveControlRequest = new VelocityVoltage(0);
+  final MotionMagicVelocityVoltage m_driveRequest = new MotionMagicVelocityVoltage(0);
   private final PositionVoltage m_turnControlRequest = new PositionVoltage(0);
 
   private Rotation2d m_simulatedAzimuth = new Rotation2d();
 
   private final DCMotorSim m_motorSimModel = new DCMotorSim(
         LinearSystemId.createDCMotorSystem(
-            DCMotor.getKrakenX60(1), 0.001, 1
+            DCMotor.getKrakenX60(1), 1e-6, ModuleConstants.kDrivingMotorReduction
         ),
         DCMotor.getKrakenX60(1)
     );
@@ -87,8 +87,8 @@ public class SimSwerveModule implements SwerveModuleIO {
     // Apply chassis angular offset to the encoder position to get the position
     // relative to the chassis.
     double wheelSpeed = rpsToMps(m_drivingKraken.getVelocity().getValueAsDouble());
-    //Rotation2d wheelAngle = new Rotation2d(Math.IEEEremainder(Units.rotationsToRadians(m_turningMotor.getPosition().getValueAsDouble()) - m_chassisAngularOffset, 2*Math.PI));
-    Rotation2d wheelAngle = m_simulatedAzimuth.minus(Rotation2d.fromRadians(m_chassisAngularOffset));
+    Rotation2d wheelAngle = new Rotation2d(Math.IEEEremainder(Units.rotationsToRadians(m_turningMotor.getPosition().getValueAsDouble()) - m_chassisAngularOffset, 2*Math.PI));
+    // Rotation2d wheelAngle = m_simulatedAzimuth.minus(Rotation2d.fromRadians(m_chassisAngularOffset));
 
     return new SwerveModuleState(wheelSpeed, wheelAngle);
   }
@@ -125,10 +125,10 @@ public class SimSwerveModule implements SwerveModuleIO {
     correctedDesiredState.optimize(new Rotation2d(Units.rotationsToRadians(m_turningMotor.getPosition().getValueAsDouble())));
 
     // Command driving and turning motors towards their respective setpoints.
-    m_driveControlRequest.Slot = 0;
+    m_driveRequest.Slot = 0;
     m_turnControlRequest.Slot = 0;
     m_drivingKraken.setControl(
-      m_driveControlRequest.withVelocity(mpsToRps(correctedDesiredState.speedMetersPerSecond)).withEnableFOC(true)
+      m_driveRequest.withVelocity(mpsToRps(correctedDesiredState.speedMetersPerSecond)).withEnableFOC(true)
     );
     m_turningMotor.setControl(
       m_turnControlRequest.withPosition(correctedDesiredState.angle.getRotations())
@@ -180,7 +180,7 @@ public class SimSwerveModule implements SwerveModuleIO {
     // apply the new rotor position and velocity to the TalonFX;
     // note that this is rotor position/velocity (before gear ratio), but
     // DCMotorSim returns mechanism position/velocity (after gear ratio)
-    m_drivingSim.setRawRotorPosition(m_motorSimModel.getAngularPosition());
-    m_drivingSim.setRotorVelocity(m_motorSimModel.getAngularVelocity());
+    m_drivingSim.setRawRotorPosition(m_motorSimModel.getAngularPosition().in(Rotations) * ModuleConstants.kDrivingMotorReduction);
+    m_drivingSim.setRotorVelocity(m_motorSimModel.getAngularVelocity().in(RotationsPerSecond) * ModuleConstants.kDrivingMotorReduction);
   }
 }

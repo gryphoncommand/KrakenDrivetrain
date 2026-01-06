@@ -14,7 +14,7 @@ import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
-import com.ctre.phoenix6.controls.VelocityVoltage;
+import com.ctre.phoenix6.controls.MotionMagicVelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.revrobotics.AbsoluteEncoder;
 
@@ -32,7 +32,7 @@ public class MAXSwerveModule implements SwerveModuleIO {
   private double m_chassisAngularOffset = 0;
   private SwerveModuleState m_desiredState = new SwerveModuleState(0.0, new Rotation2d());
 
-  private final VelocityVoltage m_controlRequest = new VelocityVoltage(0);
+  private final MotionMagicVelocityVoltage m_controlRequest = new MotionMagicVelocityVoltage(0);
 
   /**
    * Constructs a MAXSwerveModule and configures the driving and turning motor,
@@ -72,7 +72,7 @@ public class MAXSwerveModule implements SwerveModuleIO {
   }
 
   public SwerveModuleState getDesiredState(){
-    return new SwerveModuleState(Math.copySign(m_desiredState.speedMetersPerSecond, rpsToMps(m_drivingKraken.getVelocity().getValueAsDouble())), m_desiredState.angle);
+    return m_desiredState;
   }
 
   /**
@@ -112,11 +112,11 @@ public class MAXSwerveModule implements SwerveModuleIO {
     m_desiredState = desiredState;
   }
 
-  static double mpsToRps(double mps) {
+  public static double mpsToRps(double mps) {
     return (mps / (ModuleConstants.kWheelDiameterMeters * Math.PI)) * ModuleConstants.kDrivingMotorReduction;
   }
 
-  static double rpsToMps(double rps) {
+  public static double rpsToMps(double rps) {
     return rps * ((ModuleConstants.kWheelDiameterMeters * Math.PI) / ModuleConstants.kDrivingMotorReduction);
   }
 

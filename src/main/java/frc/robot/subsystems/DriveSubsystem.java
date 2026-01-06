@@ -360,11 +360,21 @@ public class DriveSubsystem extends SubsystemBase {
     List<Pose2d> waypoints = List.of(getCurrentPose(), goalPose);
     field2d.getObject("Current Trajectory").setPoses(waypoints);
 
-    Command pathfindingCommand = AutoBuilder.pathfindToPose(
-        goalPose,
-        AutoConstants.constraints,
-        endSpeed // Goal end velocity in meters/sec
+    PathPlannerPath path = new PathPlannerPath(
+      PathPlannerPath.waypointsFromPoses(waypoints),
+      AutoConstants.constraints,
+      new IdealStartingState(MovementCalculations.getVelocityMagnitude(getCurrentSpeeds()), getRotation()),
+      new GoalEndState(0.0, goalPose.getRotation())
     );
+
+    // Command pathfindingCommand = AutoBuilder.pathfindToPose(
+    //     goalPose,
+    //     AutoConstants.constraints,
+    //     endSpeed // Goal end velocity in meters/sec
+    // );
+
+    Command pathfindingCommand = AutoBuilder.followPath(path);
+
 
     return new ParallelRaceGroup(pathfindingCommand, new TrajectoryGeneration(this, goalPose, field2d));
   }

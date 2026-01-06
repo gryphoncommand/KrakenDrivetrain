@@ -2,12 +2,15 @@ package frc.GryphonLib;
 
 import static frc.robot.Constants.VisionConstants.kTagLayout;
 
+import java.util.function.Supplier;
+
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
 
 public class PositionCalculations {
-    public static Pose2d translateCoordinates(Pose2d originalPose, double degreesRotate, double distance){
+    public static Pose2d translateCoordinates(Supplier<Pose2d> originalPoseSupplier, double degreesRotate, double distance){
+        Pose2d originalPose = originalPoseSupplier.get();
         double newXCoord = originalPose.getX() + (Math.cos(Math.toRadians(degreesRotate)) * distance);
         double newYCoord = originalPose.getY() + (Math.sin(Math.toRadians(degreesRotate)) * distance);
 
@@ -17,15 +20,15 @@ public class PositionCalculations {
 
     public static Pose2d getAlignToTagPose(int tag, Transform2d transform){
         Pose2d tagPose = kTagLayout.getTagPose(tag).get().toPose2d();
-        Pose2d goalPose = translateCoordinates(tagPose, tagPose.getRotation().getDegrees(), transform.getX());
-        goalPose = translateCoordinates(goalPose, tagPose.getRotation().getDegrees() + 90, transform.getY());
+        Pose2d goalPose = translateCoordinates(()->tagPose, tagPose.getRotation().getDegrees(), transform.getX());
+        Pose2d translatedGoalPose = translateCoordinates(()->goalPose, tagPose.getRotation().getDegrees() + 90, transform.getY());
 
-        return goalPose.transformBy(new Transform2d(0, 0, new Rotation2d(Math.PI)));
+        return translatedGoalPose.transformBy(new Transform2d(0, 0, new Rotation2d(Math.PI)));
     }
 
     public static Pose2d getStraightOutPose(int tag){
         Pose2d tagPose = kTagLayout.getTagPose(tag).get().toPose2d();
-        Pose2d goalPose = translateCoordinates(tagPose, tagPose.getRotation().getDegrees(), 1.5);
+        Pose2d goalPose = translateCoordinates(()->tagPose, tagPose.getRotation().getDegrees(), 1.5);
 
         return goalPose.transformBy(new Transform2d(0, 0, new Rotation2d(Math.PI)));
     }

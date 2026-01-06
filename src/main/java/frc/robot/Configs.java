@@ -6,6 +6,7 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.revrobotics.spark.config.ClosedLoopConfig.FeedbackSensor;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 
+import frc.robot.Constants.DriveConstants;
 import frc.robot.Constants.ModuleConstants;
 
 public final class Configs {
@@ -21,13 +22,16 @@ public final class Configs {
                 
                 var slot0ConfigsDrive = driveConfig.Slot0;
                 // PID + FF tuning
-                slot0ConfigsDrive.kP = 0.7;
-                slot0ConfigsDrive.kI = 0.0;
-                slot0ConfigsDrive.kD = 0.1;
+                slot0ConfigsDrive.kS = 0;
+                slot0ConfigsDrive.kV = (12/ModuleConstants.kDrivingMotorFreeSpeedRps); // A velocity target of 1 rps results in 0.12 V output
+                slot0ConfigsDrive.kA = 0;
+                slot0ConfigsDrive.kP = 0;
+                slot0ConfigsDrive.kI = 0; 
+                slot0ConfigsDrive.kD = 0;
 
-                slot0ConfigsDrive.kS = 0.0;
-                slot0ConfigsDrive.kV = (12 / ModuleConstants.kDrivingMotorFreeSpeedRps);
-                slot0ConfigsDrive.kA = 0.0;
+                var motionMagicConfigs = driveConfig.MotionMagic;
+
+                motionMagicConfigs.MotionMagicAcceleration = frc.robot.subsystems.MAXSwerveModule.mpsToRps(DriveConstants.kMaxSpeedMetersPerSecond*2);
 
                 driveConfig.CurrentLimits.withSupplyCurrentLimit(50).withSupplyCurrentLimitEnable(true);
                 
