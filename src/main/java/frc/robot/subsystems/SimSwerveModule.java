@@ -10,7 +10,9 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.simulation.BatterySim;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
+import edu.wpi.first.wpilibj.simulation.RoboRioSim;
 
 import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
@@ -18,6 +20,7 @@ import static edu.wpi.first.units.Units.Volts;
 
 import com.ctre.phoenix6.controls.MotionMagicVelocityVoltage;
 import com.ctre.phoenix6.controls.PositionVoltage;
+import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.sim.TalonFXSimState;
 
@@ -30,7 +33,8 @@ public class SimSwerveModule implements SwerveModuleIO {
   private final TalonFX m_turningMotor;
   private final TalonFXSimState m_turningSim;
 
-  final MotionMagicVelocityVoltage m_driveRequest = new MotionMagicVelocityVoltage(0);
+  final VelocityVoltage m_driveRequest = new VelocityVoltage(0);
+  // final VelocityVoltage m_driveRequest = new VelocityVoltage(0);
   private final PositionVoltage m_turnControlRequest = new PositionVoltage(0);
 
   private Rotation2d m_simulatedAzimuth = new Rotation2d();
@@ -51,6 +55,7 @@ public class SimSwerveModule implements SwerveModuleIO {
 
   private double m_chassisAngularOffset = 0;
   private SwerveModuleState m_desiredState = new SwerveModuleState(0.0, new Rotation2d());
+
 
   /**
    * Constructs a MAXSwerveModule and configures the driving and turning motor,
@@ -86,6 +91,7 @@ public class SimSwerveModule implements SwerveModuleIO {
   public SwerveModuleState getState() {
     // Apply chassis angular offset to the encoder position to get the position
     // relative to the chassis.
+    //double wheelSpeed = Math.copySign(m_correctedDesiredState.speedMetersPerSecond, rpsToMps(m_drivingKraken.getVelocity().getValueAsDouble()));
     double wheelSpeed = rpsToMps(m_drivingKraken.getVelocity().getValueAsDouble());
     Rotation2d wheelAngle = new Rotation2d(Math.IEEEremainder(Units.rotationsToRadians(m_turningMotor.getPosition().getValueAsDouble()) - m_chassisAngularOffset, 2*Math.PI));
     // Rotation2d wheelAngle = m_simulatedAzimuth.minus(Rotation2d.fromRadians(m_chassisAngularOffset));

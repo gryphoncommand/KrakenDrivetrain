@@ -31,9 +31,9 @@ public final class Configs {
 
                 var motionMagicConfigs = driveConfig.MotionMagic;
 
-                motionMagicConfigs.MotionMagicAcceleration = frc.robot.subsystems.MAXSwerveModule.mpsToRps(DriveConstants.kMaxSpeedMetersPerSecond*2);
+                motionMagicConfigs.MotionMagicAcceleration = frc.robot.subsystems.MAXSwerveModule.mpsToRps(DriveConstants.kMaxSpeedMetersPerSecond*5);
 
-                driveConfig.CurrentLimits.withSupplyCurrentLimit(50).withSupplyCurrentLimitEnable(true);
+                driveConfig.CurrentLimits.withSupplyCurrentLimit(90).withSupplyCurrentLimitEnable(true);
                 
                 // Motor behavior
                 driveConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;

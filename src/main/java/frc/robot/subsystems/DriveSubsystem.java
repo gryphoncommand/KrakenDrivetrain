@@ -4,21 +4,25 @@
 
 package frc.robot.subsystems;
 
+import static edu.wpi.first.units.Units.MetersPerSecond;
+
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.littletonrobotics.junction.Logger;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonUtils;
 
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.commands.PathfindThenFollowPath;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import com.pathplanner.lib.path.GoalEndState;
 import com.pathplanner.lib.path.IdealStartingState;
+import com.pathplanner.lib.path.PathConstraints;
 import com.pathplanner.lib.path.PathPlannerPath;
-import com.pathplanner.lib.path.Waypoint;
 
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
@@ -53,6 +57,7 @@ import frc.robot.Constants.DriveConstants;
 import frc.robot.Constants.VisionConstants;
 import frc.robot.commands.TrajectoryGeneration;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.ParallelRaceGroup;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
@@ -189,8 +194,8 @@ public class DriveSubsystem extends SubsystemBase {
       this::getCurrentSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
       (speeds, feedforwards) -> driveRobotRelativeChassis(speeds), // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds. Also optionally outputs individual module feedforwards
       new PPHolonomicDriveController( // PPHolonomicController is the built in path following controller for holonomic drive trains
-              new PIDConstants(5.0, 0.0, 0.0), // Translation PID constants
-              new PIDConstants(5.0, 0.0, 0.0) // Rotation PID constants
+              new PIDConstants(3.0, 0.0, 0.0), // Translation PID constants
+              new PIDConstants(3.0, 0.0, 0.0) // Rotation PID constants
       ),
       config, // The robot configuration
       () -> {
@@ -338,42 +343,53 @@ public class DriveSubsystem extends SubsystemBase {
   }
 
   public PathPlannerPath getPathFromWaypoint(Pose2d waypoint) {
-    List<Waypoint> waypoints = PathPlannerPath.waypointsFromPoses(
-        getCurrentPose(),
-        waypoint
-    );
-    PathPlannerPath path = new PathPlannerPath(
-      waypoints, 
-      AutoConstants.constraints,
-      new IdealStartingState(MovementCalculations.getVelocityMagnitude(getCurrentSpeeds()), getRotation()), 
-      new GoalEndState(0.0, waypoint.getRotation())
-    );
-    return path;
+    return createPath(waypoint, AutoConstants.constraints, new GoalEndState(0.0, waypoint.getRotation()));
   }
 
-  public Command followPath(PathPlannerPath path){
-    return AutoBuilder.followPath(path);
+  public Command goToPose(Pose2d goalPose){
+    ChassisSpeeds fieldRelativeSpeeds = ChassisSpeeds.fromRobotRelativeSpeeds(getCurrentSpeeds(), getRotation());
+    if (MovementCalculations.getVelocityMagnitude(getCurrentSpeeds()).in(MetersPerSecond) > 0.5){
+      SmartDashboard.putBoolean("Included Previous Speed in Path", true);
+      SmartDashboard.putNumber("Speed at start of path", MovementCalculations.getVelocityMagnitude(fieldRelativeSpeeds).in(MetersPerSecond));
+      return Commands.defer(
+        () -> AutoBuilder.followPath(getPathFromWaypoint(goalPose)),
+        Set.of(this)
+      ).raceWith(new TrajectoryGeneration(this, goalPose, field2d));
+    } else {
+      SmartDashboard.putBoolean("Included Previous Speed in Path", false);
+      SmartDashboard.putNumber("Speed at start of path", MovementCalculations.getVelocityMagnitude(fieldRelativeSpeeds).in(MetersPerSecond));
+      return PathToPose(goalPose, 0.0).raceWith(new TrajectoryGeneration(this, goalPose, field2d));
+    }
+    
+  }
+
+  public PathPlannerPath createPath(Pose2d goalPose, PathConstraints constraints, GoalEndState endState){
+    field2d.getObject("Goal Pose").setPose(goalPose);
+    List<Pose2d> waypoints = List.of(getCurrentPose(), goalPose);
+    field2d.getObject("Current Trajectory").setPoses(waypoints);
+    ChassisSpeeds fieldRelativeSpeeds = ChassisSpeeds.fromRobotRelativeSpeeds(getCurrentSpeeds(), getRotation());
+    Rotation2d movementDirection = new Rotation2d(Math.atan2(fieldRelativeSpeeds.vxMetersPerSecond, fieldRelativeSpeeds.vyMetersPerSecond));
+    IdealStartingState startingState = new IdealStartingState(MovementCalculations.getVelocityMagnitude(getCurrentSpeeds()), movementDirection);    
+
+    return new PathPlannerPath(
+      PathPlannerPath.waypointsFromPoses(waypoints),
+      constraints,
+      startingState,
+      new GoalEndState(0.0, goalPose.getRotation())
+    );
   }
 
   public Command PathToPose(Pose2d goalPose, double endSpeed){
     field2d.getObject("Goal Pose").setPose(goalPose);
-    List<Pose2d> waypoints = List.of(getCurrentPose(), goalPose);
+    List<Pose2d> waypoints = List.of();
+    waypoints = List.of(getCurrentPose(), goalPose);
     field2d.getObject("Current Trajectory").setPoses(waypoints);
 
-    PathPlannerPath path = new PathPlannerPath(
-      PathPlannerPath.waypointsFromPoses(waypoints),
-      AutoConstants.constraints,
-      new IdealStartingState(MovementCalculations.getVelocityMagnitude(getCurrentSpeeds()), getRotation()),
-      new GoalEndState(0.0, goalPose.getRotation())
+    Command pathfindingCommand = AutoBuilder.pathfindToPose(
+        goalPose,
+        AutoConstants.constraints,
+        endSpeed // Goal end velocity in meters/sec
     );
-
-    // Command pathfindingCommand = AutoBuilder.pathfindToPose(
-    //     goalPose,
-    //     AutoConstants.constraints,
-    //     endSpeed // Goal end velocity in meters/sec
-    // );
-
-    Command pathfindingCommand = AutoBuilder.followPath(path);
 
 
     return new ParallelRaceGroup(pathfindingCommand, new TrajectoryGeneration(this, goalPose, field2d));

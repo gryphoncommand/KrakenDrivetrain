@@ -11,12 +11,15 @@ import frc.robot.subsystems.DriveSubsystem;
 
 import static edu.wpi.first.units.Units.Seconds;
 
+import java.util.Set;
+
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -57,11 +60,11 @@ public class RobotContainer {
   private void configureButtonBindings() {
     // Driver bindings
     m_driverController.start().onTrue(new InstantCommand(()->m_drive.zeroHeading(), m_drive));
-    m_driverController.leftBumper().onTrue(new InstantCommand(()->PositionPIDCommand.generateCommand(m_drive, PositionCalculations.translateCoordinates(m_drive::getCurrentPose, 0, 2), Seconds.of(2)).schedule()));
-    m_driverController.rightBumper().whileTrue(new InstantCommand(()->m_drive.PathToPose(PositionCalculations.translateCoordinates(m_drive::getCurrentPose, 0, -2), 0.0).schedule()));
+    m_driverController.leftBumper().whileTrue(Commands.defer(()->PositionPIDCommand.generateCommand(m_drive, PositionCalculations.translateCoordinates(m_drive::getCurrentPose, 0, 2), Seconds.of(2)), Set.of(m_drive)));
+    m_driverController.rightBumper().whileTrue(Commands.defer(()->m_drive.goToPose(PositionCalculations.translateCoordinates(m_drive::getCurrentPose, 0, -2)), Set.of(m_drive)));
     // Operator bindings
-    SmartDashboard.putData("Drive 2m Back", new InstantCommand(()->m_drive.PathToPose(PositionCalculations.translateCoordinates(m_drive::getCurrentPose, 0, -2), 0.0).schedule()));
-    SmartDashboard.putData("Drive 2m Forward", new InstantCommand(()->m_drive.PathToPose(PositionCalculations.translateCoordinates(m_drive::getCurrentPose, 0, 2), 0.0).schedule()));
+    SmartDashboard.putData("Drive 2m Back", Commands.defer(()->m_drive.goToPose(PositionCalculations.translateCoordinates(m_drive::getCurrentPose, 0, -2)), Set.of(m_drive)));
+    SmartDashboard.putData("Drive 2m Forward", new InstantCommand(()->m_drive.goToPose(PositionCalculations.translateCoordinates(m_drive::getCurrentPose, 0, 2)).schedule()));
     SmartDashboard.putData("PID 2m Forward", new InstantCommand(()->PositionPIDCommand.generateCommand(m_drive, PositionCalculations.translateCoordinates(m_drive::getCurrentPose, 0, 2), Seconds.of(2)).schedule()));
   
   }
@@ -71,9 +74,13 @@ public class RobotContainer {
 
   /** Returns the autonomous command. */
   public Command getAutonomousCommand() {
-    return 
-    m_drive.PathToPose(new Pose2d(new Translation2d(4, 6), new Rotation2d(3*Math.PI/4)), 0).andThen(
-      m_drive.PathToPose(new Pose2d(new Translation2d(12, 2), new Rotation2d(11*Math.PI/6)), 0)
+    // return m_drive.PathToPose(new Pose2d(new Translation2d(4, 6), new Rotation2d(3*Math.PI/4)), 0).andThen(
+    //   m_drive.PathToPose(new Pose2d(new Translation2d(12, 2), new Rotation2d(11*Math.PI/6)), 0)
+    // );
+
+    return m_drive.goToPose(new Pose2d(new Translation2d(4, 6), new Rotation2d(3*Math.PI/4))).andThen(
+      m_drive.goToPose(new Pose2d(new Translation2d(12, 2), new Rotation2d(11*Math.PI/6)))
     );
+  
   }
 }

@@ -118,7 +118,7 @@ public final class Constants {
         kMaxAngularSpeedRadiansPerSecond, kMaxAngularSpeedRadiansPerSecondSquared);
 
         public static final PathConstraints constraints = new PathConstraints(
-          3, 2,
+          3, 3,
           Units.degreesToRadians(360), Units.degreesToRadians(180));
   }
 

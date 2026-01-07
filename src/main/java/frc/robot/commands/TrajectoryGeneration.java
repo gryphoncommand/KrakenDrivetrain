@@ -4,6 +4,7 @@ import java.util.ArrayList;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.DriveSubsystem;
 
@@ -28,5 +29,6 @@ public class TrajectoryGeneration extends Command {
         waypoints.add(m_drivetrain.getCurrentPose());
         waypoints.add(goalPose);
         field.getObject("Current Trajectory").setPoses(waypoints);
+        SmartDashboard.putNumber("Distance to Target", m_drivetrain.getDistanceToGoal());
     }
 }
