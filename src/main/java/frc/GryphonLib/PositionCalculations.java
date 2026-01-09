@@ -30,7 +30,8 @@ public class PositionCalculations {
         Pose2d tagPose = kTagLayout.getTagPose(tag).get().toPose2d();
         Pose2d goalPose = translateCoordinates(()->tagPose, tagPose.getRotation().getDegrees(), 1.5);
 
-        return goalPose.transformBy(new Transform2d(0, 0, new Rotation2d(Math.PI)));
+        return goalPose.transformBy(new Transform2d(0, 0, new Rotation2d(Math.PI/2)));
+        // return goalPose.transformBy(new Transform2d(0, 0, new Rotation2d(Math.PI)));
     }
     
     public static double getYawChangeToTag(Pose2d robotPose, int tagID){

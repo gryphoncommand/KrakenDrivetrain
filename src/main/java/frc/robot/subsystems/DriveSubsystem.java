@@ -15,12 +15,10 @@ import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonUtils;
 
 import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.commands.PathfindThenFollowPath;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import com.pathplanner.lib.path.GoalEndState;
-import com.pathplanner.lib.path.IdealStartingState;
 import com.pathplanner.lib.path.PathConstraints;
 import com.pathplanner.lib.path.PathPlannerPath;
 
@@ -76,8 +74,8 @@ public class DriveSubsystem extends SubsystemBase {
   private double gyroOffset = 0.0;
 
   private static final Vector<N3> stateStdDevs = VecBuilder.fill(0.05, 0.05, Units.degreesToRadians(5));
-  // private static Vector<N3> LLStdDevs = VecBuilder.fill(0.05, 0.05, Units.degreesToRadians(10));
-  // private static Matrix<N3, N1> LLstdevsMat = new Matrix<>(LLStdDevs.getStorage());
+  private static Vector<N3> LLStdDevs = VecBuilder.fill(0.05, 0.05, Units.degreesToRadians(10));
+  private static Matrix<N3, N1> LLstdevsMat = new Matrix<>(LLStdDevs.getStorage());
   private static Vector<N3> ArduStdDevs = VecBuilder.fill(0.2, 0.2, Units.degreesToRadians(10));
   private static Matrix<N3, N1> ArdustdevsMat = new Matrix<>(ArduStdDevs.getStorage());
   private final PoseEstimator poseEstimator;
@@ -367,14 +365,12 @@ public class DriveSubsystem extends SubsystemBase {
     field2d.getObject("Goal Pose").setPose(goalPose);
     List<Pose2d> waypoints = List.of(getCurrentPose(), goalPose);
     field2d.getObject("Current Trajectory").setPoses(waypoints);
-    ChassisSpeeds fieldRelativeSpeeds = ChassisSpeeds.fromRobotRelativeSpeeds(getCurrentSpeeds(), getRotation());
-    Rotation2d movementDirection = new Rotation2d(Math.atan2(fieldRelativeSpeeds.vxMetersPerSecond, fieldRelativeSpeeds.vyMetersPerSecond));
-    IdealStartingState startingState = new IdealStartingState(MovementCalculations.getVelocityMagnitude(getCurrentSpeeds()), movementDirection);    
+    
 
     return new PathPlannerPath(
       PathPlannerPath.waypointsFromPoses(waypoints),
       constraints,
-      startingState,
+      null,
       new GoalEndState(0.0, goalPose.getRotation())
     );
   }
@@ -412,32 +408,11 @@ public class DriveSubsystem extends SubsystemBase {
     if (Vision.getResult1() != null){
       Optional<EstimatedRobotPose> visionBotPose1 = Vision.getEstimatedGlobalPoseCam1(getCurrentPose(), Vision.getResult1());
       if (visionBotPose1.isPresent()){
-        // poseEstimator.addVisionData(List.of(visionBotPose1.get()), LLstdevsMat);
+        poseEstimator.addVisionData(List.of(visionBotPose1.get()), LLstdevsMat);
         field2d.getObject("Camera1 Pose Guess").setPose(visionBotPose1.get().estimatedPose.toPose2d());
       }
-    }
-    if (Vision.getResult2() != null){
-      Optional<EstimatedRobotPose> visionBotPose2 = Vision.getEstimatedGlobalPoseCam2(getCurrentPose(), Vision.getResult2());
-      if (visionBotPose2.isPresent()){
-        if(visionBotPose2.get().targetsUsed.size() > 1){
-          poseEstimator.addVisionData(List.of(visionBotPose2.get()), VisionConstants.kMultiTagStdDevs);
-        } else{
-          poseEstimator.addVisionData(List.of(visionBotPose2.get()), ArdustdevsMat);
-        }
-        field2d.getObject("Camera2 Pose Guess").setPose(visionBotPose2.get().estimatedPose.toPose2d());
-      }
-    }
-    if (Vision.getResult3() != null){
-      Optional<EstimatedRobotPose> visionBotPose3 = Vision.getEstimatedGlobalPoseCam3(getCurrentPose(), Vision.getResult3());
-      if (visionBotPose3.isPresent()){
-        if(visionBotPose3.get().targetsUsed.size() > 1){
-          poseEstimator.addVisionData(List.of(visionBotPose3.get()), VisionConstants.kMultiTagStdDevs);
-        }
-        else{
-          poseEstimator.addVisionData(List.of(visionBotPose3.get()), ArdustdevsMat);
-        }
-        field2d.getObject("Camera3 Pose Guess").setPose(visionBotPose3.get().estimatedPose.toPose2d());
-      }
+    } else{
+      SmartDashboard.putBoolean("Limelight Results Appearing", false);
     }
     
     // Update pose estimator with drivetrain sensors

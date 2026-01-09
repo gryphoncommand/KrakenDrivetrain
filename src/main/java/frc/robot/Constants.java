@@ -133,9 +133,10 @@ public final class Constants {
     // Cam mounted facing forward, half a meter forward of center, half a meter up from center,
     // pitched upward.
     private static final double camPitch1 = Units.degreesToRadians(-20);
-    private static final double camYaw1 = Units.degreesToRadians(-2);
+    private static final double camYaw1 = Units.degreesToRadians(90);
+    
     public static final Transform3d kRobotToCam1 =
-            new Transform3d(new Translation3d(Units.inchesToMeters(11), -Units.inchesToMeters(0.5), Units.inchesToMeters(7.5)), new Rotation3d(0, camPitch1, camYaw1));
+            new Transform3d(new Translation3d(Units.inchesToMeters(0), Units.inchesToMeters(14), Units.inchesToMeters(10)), new Rotation3d(0, camPitch1, camYaw1));
     public static final Transform3d kCamToRobot1 = kRobotToCam1.inverse();
 
     // some of these probably need to be flipped
@@ -154,7 +155,7 @@ public final class Constants {
 
 
     // The layout of the AprilTags on the field
-    public static final AprilTagFieldLayout kTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2024Crescendo);
+    public static final AprilTagFieldLayout kTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeAndyMark);
 
     // The standard deviations of our vision estimated poses, which affect correction rate
     // (Fake values. Experiment and determine estimation noise on an actual robot.)

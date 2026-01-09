@@ -36,6 +36,7 @@ public class RobotContainer {
       new CommandXboxController(OIConstants.kOperatorControllerPort);
 
   public RobotContainer() {
+    new Vision();
     configureDefaultCommands();
     configureButtonBindings();
     configureStateTriggers();
@@ -62,7 +63,9 @@ public class RobotContainer {
     m_driverController.start().onTrue(new InstantCommand(()->m_drive.zeroHeading(), m_drive));
     m_driverController.leftBumper().whileTrue(Commands.defer(()->PositionPIDCommand.generateCommand(m_drive, PositionCalculations.translateCoordinates(m_drive::getCurrentPose, 0, 2), Seconds.of(2)), Set.of(m_drive)));
     m_driverController.rightBumper().whileTrue(Commands.defer(()->m_drive.goToPose(PositionCalculations.translateCoordinates(m_drive::getCurrentPose, 0, -2)), Set.of(m_drive)));
-    // Operator bindings
+    m_driverController.a().whileTrue(Commands.defer(()->PositionPIDCommand.generateCommand(m_drive, PositionCalculations.getStraightOutPose(8), Seconds.of(2)), Set.of(m_drive)));
+    m_driverController.b().whileTrue(Commands.defer(()->m_drive.goToPose(PositionCalculations.getStraightOutPose(8)), Set.of(m_drive)));
+
     SmartDashboard.putData("Drive 2m Back", Commands.defer(()->m_drive.goToPose(PositionCalculations.translateCoordinates(m_drive::getCurrentPose, 0, -2)), Set.of(m_drive)));
     SmartDashboard.putData("Drive 2m Forward", new InstantCommand(()->m_drive.goToPose(PositionCalculations.translateCoordinates(m_drive::getCurrentPose, 0, 2)).schedule()));
     SmartDashboard.putData("PID 2m Forward", new InstantCommand(()->PositionPIDCommand.generateCommand(m_drive, PositionCalculations.translateCoordinates(m_drive::getCurrentPose, 0, 2), Seconds.of(2)).schedule()));
